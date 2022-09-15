@@ -42,13 +42,13 @@ def main() -> None:
                     move = chessEngine.Move(playerClicks[0], 
                                             playerClicks[1], 
                                             gs.board)
-                    print(move.getChessNotation())
-                    print(len(validMoves))
                     if (move in validMoves):
                         gs.makeMove(move)
                         moveMade = True
-                    sqSelected = ()
-                    playerClicks = []
+                        sqSelected = ()
+                        playerClicks = []
+                    else:
+                        playerClicks = [sqSelected]
             # Key handlers
             elif (event.type == pg.KEYDOWN):
                 # Undo when 'z' is pressed

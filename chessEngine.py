@@ -53,7 +53,7 @@ class Piece:
         image = pg.image.load(f'images/{self.id}.png')
         self.image = pg.transform.scale(image, scaled)
 
-    def movesPawn(self, whiteToMove, r, c, board):
+    def movesPawn(self, whiteToMove, r, c, board) -> List[Move]:
         moves = []
         if (whiteToMove and self.id == 'wp'):
             if (board[r-1][c] == '--'):
@@ -83,14 +83,130 @@ class Piece:
                         moves.append(Move((r, c), (r+1, c+1), board))
         return moves
     
+    def movesRock(self, whiteToMove, r, c, board) -> List[Move]:
+        directions = [(-1, 0), (0, -1), (1, 0), (0, 1)]
+        enemyColor = ["w", "b"][whiteToMove]
+        moves = []
+        for d in directions:
+            for i in range(1, 8):
+                endRow = r + d[0] * i
+                endCol = c + d[1] * i
+                if (0 <= endRow <= 7 and 0 <= endCol <= 7):
+                    endPiece = board[endRow][endCol]
+                    if (endPiece == '--'):
+                        moves.append(Move((r, c), (endRow, endCol), board))
+                    elif (endPiece.id[0] == enemyColor):
+                        moves.append(Move((r, c), (endRow, endCol), board))
+                        break
+                    else:
+                        break
+                else:
+                    break
+        if (whiteToMove and self.id[0] == 'w'):
+            return moves
+        elif ((not whiteToMove) and self.id[0] == 'b'):
+            return moves
+        else:
+            return []
+        
+    def movesKnight(self, whiteToMove, r, c, board) -> List[Move]:
+        directions = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), 
+                      (1, -2), (1, 2), (2, -1), (2, 1)]
+        allyColor = ["b", "w"][whiteToMove]
+        moves = []
+        for d in directions:
+            endRow = r + d[0]
+            endCol = c + d[1]
+            if (0 <= endRow <= 7 and 0 <= endCol <= 7):
+                endPiece = board[endRow][endCol]
+                if (endPiece == '--'):
+                     moves.append(Move((r, c), (endRow, endCol), board))
+                elif (endPiece.id[0] != allyColor):
+                    moves.append(Move((r, c), (endRow, endCol), board))
+        if (whiteToMove and self.id[0] == 'w'):
+            return moves
+        elif ((not whiteToMove) and self.id[0] == 'b'):
+            return moves
+        else:
+            return []
+        
+    def movesBishop(self, whiteToMove, r, c, board) -> List[Move]:
+        directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+        enemyColor = ["w", "b"][whiteToMove]
+        moves = []
+        for d in directions:
+            for i in range(1, 8):
+                endRow = r + d[0] * i
+                endCol = c + d[1] * i
+                if (0 <= endRow <= 7 and 0 <= endCol <= 7):
+                    endPiece = board[endRow][endCol]
+                    if (endPiece == '--'):
+                        moves.append(Move((r, c), (endRow, endCol), board))
+                    elif (endPiece.id[0] == enemyColor):
+                        moves.append(Move((r, c), (endRow, endCol), board))
+                        break
+                    else:
+                        break
+                else:
+                    break
+        if (whiteToMove and self.id[0] == 'w'):
+            return moves
+        elif ((not whiteToMove) and self.id[0] == 'b'):
+            return moves
+        else:
+            return []
+    
+    def movesQueen(self, whiteToMove, r, c, board) -> List[Move]:
+        moves = []
+        moves.extend(self.movesBishop(whiteToMove, r, c, board) +
+                     self.movesRock(whiteToMove, r, c, board))
+        if (whiteToMove and self.id[0] == 'w'):
+            return moves
+        elif ((not whiteToMove) and self.id[0] == 'b'):
+            return moves
+        else:
+            return []
+        
+    def movesKing(self, whiteToMove, r, c, board) -> List[Move]:
+        directions = [(-1, -1), (-1, 0), (-1, 1), (0, 1), 
+                      (1, 1), (1, 0), (1, -1), (0, -1)]
+        allyColor = ["b", "w"][whiteToMove]
+        moves = []
+        for d in directions:
+            endRow = r + d[0]
+            endCol = c + d[1]
+            if (0 <= endRow <= 7 and 0 <= endCol <= 7):
+                endPiece = board[endRow][endCol]
+                if (endPiece == '--'):
+                     moves.append(Move((r, c), (endRow, endCol), board))
+                elif (endPiece.id[0] != allyColor):
+                    moves.append(Move((r, c), (endRow, endCol), board))
+        if (whiteToMove and self.id[0] == 'w'):
+            return moves
+        elif ((not whiteToMove) and self.id[0] == 'b'):
+            return moves
+        else:
+            return []
+    
     def moves(self, whiteToMove: bool,r: int, c: int,
               board: List[List[object]]) -> List[Move]:
         moves = []
         match self.id[1]:
             case 'p':
                 moves.extend(self.movesPawn(whiteToMove, r, c, board))
+            case 'R':
+                moves.extend(self.movesRock(whiteToMove, r, c, board))
+            case 'N':
+                moves.extend(self.movesKnight(whiteToMove, r, c, board))
+            case 'B':
+                moves.extend(self.movesBishop(whiteToMove, r, c, board))
+            case 'Q':
+                moves.extend(self.movesQueen(whiteToMove, r, c, board))
+            case 'K':
+                moves.extend(self.movesKing(whiteToMove, r, c, board))
         return moves
             
+    
     
     
 class GameState:
