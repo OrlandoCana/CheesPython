@@ -1,4 +1,48 @@
+from typing import List
 import pygame as pg
+
+'''
+this class is responsible for storing all the information about
+the current state of a chess game. It will also be responsible 
+for determining the valid moves at the current state. It will also kepp 
+a move log.
+''' 
+
+class Move:
+    # Maps keys to values
+    ranksToRows = {"1": 7, "2": 6, "3": 5, "4": 4,
+                   "5": 3, "6": 2, "7": 1, "8": 0}
+    rowsToRanks = {v: k for k, v in ranksToRows.items()}
+    filesToCols = {"a": 0, "b": 1, "c": 2, "d": 3,
+                   "e": 4, "f": 5, "g": 6, "h": 7}
+    colsToFiles = {v: k for k, v in filesToCols.items()}
+    
+    def __init__(self, start, end, board) -> None:
+        self.startRow, self.startCol = start
+        self.endRow, self.endCol = end
+        self.pieceMoved = None
+        if (0 <= self.startRow <= 7 and 0 <= self.startCol <= 7):
+            self.pieceMoved = board[self.startRow][self.startCol]
+        self.pieceCaptured = None
+        if (0 <= self.endRow <= 7 and 0 <= self.endCol <= 7):
+            self.pieceCaptured = board[self.endRow][self.endCol]
+        self.moveId = self.startRow * 1000 + self.startCol * 100 \
+                    + self.endRow * 10 + self.endCol
+    
+    '''
+    overriding the equals method
+    '''
+    def __eq__(self, __o: object) -> bool:
+        if (not isinstance(__o, Move)):
+            return False
+        return self.moveId == __o.moveId
+    
+    def getChessNotation(self):
+        return self.getRankFile(self.startRow, self.startCol) + \
+                self.getRankFile(self.endRow, self.endCol)
+    
+    def getRankFile(self, r, c):
+        return self.colsToFiles[c] + self.rowsToRanks[r]
 
 '''
 this class represents a piece of chees game
@@ -9,14 +53,61 @@ class Piece:
         image = pg.image.load(f'images/{self.id}.png')
         self.image = pg.transform.scale(image, scaled)
 
-'''
-this class is responsible for storing all the information about
-the current state of a chess game. It will also be responsible 
-for determining the valid moves at the current state. It will also kepp 
-a move log.
-''' 
+    def movesPawn(self, whiteToMove, r, c, board):
+        moves = []
+        if (whiteToMove and self.id == 'wp'):
+            if (board[r-1][c] == '--'):
+                moves.append(Move((r, c), (r-1, c), board))
+            if (board[r-2][c] == '--' and r == 6):
+                moves.append(Move((r, c), (r-2, c), board))
+            if (c-1 >= 0):
+                if (board[r-1][c-1] != '--'):
+                    if (board[r-1][c-1].id[0] == 'b'):
+                        moves.append(Move((r, c), (r-1, c-1), board))
+            if (c+1 <= 7):
+                if (board[r-1][c+1] != '--'):
+                    if (board[r-1][c+1].id[0] == 'b'):
+                        moves.append(Move((r, c), (r-1, c+1), board))
+        elif ((not whiteToMove) and self.id == 'bp'):
+            if (board[r+1][c] == '--'):
+                moves.append(Move((r, c), (r+1, c), board))
+            if (board[r+2][c] == '--' and r == 1):
+                moves.append(Move((r, c), (r+2, c), board))
+            if (c+1 >= 0):
+                if (board[r+1][c-1] != '--'):
+                    if (board[r+1][c-1].id[0] == 'w'):
+                        moves.append(Move((r, c), (r+1, c-1), board))
+            if (c+1 <= 7):
+                if (board[r+1][c+1] != '--'):
+                    if (board[r+1][c+1].id[0] == 'w'):
+                        moves.append(Move((r, c), (r+1, c+1), board))
+        return moves
+    
+    def moves(self, whiteToMove: bool,r: int, c: int,
+              board: List[List[object]]) -> List[Move]:
+        moves = []
+        match self.id[1]:
+            case 'p':
+                moves.extend(self.movesPawn(whiteToMove, r, c, board))
+        return moves
+            
+    
+    
 class GameState:
+    
     def __init__(self, scaled: tuple) -> None:
+        '''
+        Board is an 8x8 2d list.
+        
+        The firts character represents the color of the piece,
+        'b' black and 'w' white. 
+        
+        The Second character represents the type pf the piece,
+        King 'K', Queen 'Q', Bishop 'B', Knigth 'N', Castle 'R',
+         Pawn 'p'.
+         
+         '--' represents an empty space with no piece.
+        '''
         bp, wp = Piece('bp', scaled), Piece('wp', scaled)
         bQ, wQ = Piece('bQ', scaled), Piece('wQ', scaled)
         bB, wB = Piece('bB', scaled), Piece('wB', scaled)
@@ -36,4 +127,40 @@ class GameState:
         ]
         self.whiteToMove = True
         self.moveLog = []
+    
+    def makeMove(self, move: Move) -> None:
+        self.board[move.startRow][move.startCol] = '--' # empty square
+        self.board[move.endRow][move.endCol] = move.pieceMoved
+        self.moveLog.append(move)
+        self.whiteToMove = not self.whiteToMove # swap players
         
+    '''
+    Undo the last move made
+    '''
+    def undoMove(self):
+        # Make sure that there is a move to undo
+        if (len(self.moveLog) != 0):
+            move = self.moveLog.pop()
+            self.board[move.startRow][move.startCol] = move.pieceMoved
+            self.board[move.endRow][move.endCol] = move.pieceCaptured
+            self.whiteToMove = not self.whiteToMove
+            
+    '''
+    All moves considering checks
+    '''
+    def getValidMoves(self):
+        return self.getAllPossibleMoves()
+    
+    '''
+    All moves without considering checks
+    '''
+    def getAllPossibleMoves(self):
+        moves = []
+        for r in range(len(self.board)):
+            for c in range(len(self.board)):
+                if (self.board[r][c] != '--'):
+                    piece = self.board[r][c]
+                    moves.extend(piece.moves(self.whiteToMove, r, c, self.board))
+        return moves
+    
+   

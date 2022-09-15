@@ -19,11 +19,45 @@ def main() -> None:
     clock = pg.time.Clock()
     screen.fill(pg.Color('White'))
     gs = chessEngine.GameState((SQ_SIZE, SQ_SIZE))
+    validMoves = gs.getValidMoves()
+    moveMade = False # Flag variable for when a move is made
     running = True
+    sqSelected = ()
+    playerClicks = []
     while running:
         for event in pg.event.get():
             if (event.type == pg.QUIT):
                 running = False
+            elif (event.type == pg.MOUSEBUTTONDOWN):
+                location = pg.mouse.get_pos()
+                row = location[1]//SQ_SIZE
+                col = location[0]//SQ_SIZE
+                if (sqSelected == (row, col)):
+                    sqSelected = ()
+                    playerClicks = []
+                else:
+                    sqSelected = (row, col)
+                    playerClicks.append(sqSelected)
+                if (len(playerClicks) == 2):
+                    move = chessEngine.Move(playerClicks[0], 
+                                            playerClicks[1], 
+                                            gs.board)
+                    print(move.getChessNotation())
+                    print(len(validMoves))
+                    if (move in validMoves):
+                        gs.makeMove(move)
+                        moveMade = True
+                    sqSelected = ()
+                    playerClicks = []
+            # Key handlers
+            elif (event.type == pg.KEYDOWN):
+                # Undo when 'z' is pressed
+                if (event.key == pg.K_z):
+                    gs.undoMove()
+                    moveMade = True
+        if (moveMade):
+            validMoves = gs.getValidMoves()
+            moveMade = False
         drawGameState(screen, gs)
         clock.tick(MAX_FPS)
         pg.display.flip()
